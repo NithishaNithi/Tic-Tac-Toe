@@ -24,6 +24,6 @@ This is a simple 2-player **Tic Tac Toe** game built using **Python and Pygame**
 ## 📦 Installation
 
 1. **Clone or download this repository**:
-   ```bash
-   git clone https://github.com/yourusername/tic-tac-toe-pygame.git
-   cd tic-tac-toe-pygame
+   
+   git clone https://github.com/yourusername/Tic-Tac-Toe.git
+   cd Tic-Tac-Toe
