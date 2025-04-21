@@ -1,0 +1,146 @@
+import streamlit as st
+import random
+import copy
+
+st.set_page_config(page_title="Tic Tac Toe", layout="centered")
+
+# Initialize session state
+if "board" not in st.session_state:
+    st.session_state.board = [[None] * 3 for _ in range(3)]
+    st.session_state.player = "X"
+    st.session_state.status = "🟦 Player X's Turn"
+    st.session_state.game_over = False
+    st.session_state.difficulty = "🟢 Easy"
+    st.session_state.score_x = 0
+    st.session_state.score_o = 0
+    st.session_state.ties = 0
+
+# Utility functions
+def check_win(board, player):
+    for i in range(3):
+        if all(cell == player for cell in board[i]) or all(row[i] == player for row in board):
+            return True
+    if all(board[i][i] == player for i in range(3)) or all(board[i][2 - i] == player for i in range(3)):
+        return True
+    return False
+
+def check_tie(board):
+    return all(cell is not None for row in board for cell in row)
+
+def get_empty_cells(board):
+    return [(r, c) for r in range(3) for c in range(3) if board[r][c] is None]
+
+def ai_move_easy(board):
+    return random.choice(get_empty_cells(board)) if get_empty_cells(board) else (None, None)
+
+def ai_move_medium(board):
+    for r, c in get_empty_cells(board):
+        temp = copy.deepcopy(board)
+        temp[r][c] = "X"
+        if check_win(temp, "X"):
+            return r, c
+    return ai_move_easy(board)
+
+def minimax(board, maximizing):
+    if check_win(board, "X"):
+        return -1
+    elif check_win(board, "O"):
+        return 1
+    elif check_tie(board):
+        return 0
+
+    if maximizing:
+        best = -float("inf")
+        for r, c in get_empty_cells(board):
+            board[r][c] = "O"
+            score = minimax(board, False)
+            board[r][c] = None
+            best = max(score, best)
+        return best
+    else:
+        best = float("inf")
+        for r, c in get_empty_cells(board):
+            board[r][c] = "X"
+            score = minimax(board, True)
+            board[r][c] = None
+            best = min(score, best)
+        return best
+
+def ai_move_hard(board):
+    best_score = -float("inf")
+    best_move = None
+    for r, c in get_empty_cells(board):
+        board[r][c] = "O"
+        score = minimax(board, False)
+        board[r][c] = None
+        if score > best_score:
+            best_score = score
+            best_move = (r, c)
+    return best_move
+
+# Handle click
+def handle_click(row, col):
+    if st.session_state.board[row][col] is None and not st.session_state.game_over:
+        st.session_state.board[row][col] = "X"
+
+        if check_win(st.session_state.board, "X"):
+            st.session_state.status = "🎉 You win!"
+            st.session_state.score_x += 1
+            st.session_state.game_over = True
+            return
+        elif check_tie(st.session_state.board):
+            st.session_state.status = "😢 It's a tie!"
+            st.session_state.ties += 1
+            st.session_state.game_over = True
+            return
+
+        if st.session_state.difficulty == "🟢 Easy":
+            r, c = ai_move_easy(st.session_state.board)
+        elif st.session_state.difficulty == "🟡 Medium":
+            r, c = ai_move_medium(st.session_state.board)
+        else:
+            r, c = ai_move_hard(st.session_state.board)
+
+        st.session_state.board[r][c] = "O"
+
+        if check_win(st.session_state.board, "O"):
+            st.session_state.status = "🤖 Computer wins!"
+            st.session_state.score_o += 1
+            st.session_state.game_over = True
+        elif check_tie(st.session_state.board):
+            st.session_state.status = "😢 It's a tie!"
+            st.session_state.ties += 1
+            st.session_state.game_over = True
+        else:
+            st.session_state.status = "🟦 Player X's Turn"
+
+# UI Components
+st.title("Tic Tac Toe: Player vs AI 🤖")
+
+col1, col2 = st.columns([1, 1])
+with col1:
+    if st.button("🔁 Restart Game"):
+        st.session_state.board = [[None] * 3 for _ in range(3)]
+        st.session_state.player = "X"
+        st.session_state.status = "🟦 Player X's Turn"
+        st.session_state.game_over = False
+
+with col2:
+    st.session_state.difficulty = st.selectbox("AI Difficulty", ["🟢 Easy", "🟡 Medium", "🔴 Hard"])
+
+st.markdown(f"### {st.session_state.status}")
+st.markdown(f"**Score:** Player X - {st.session_state.score_x} | AI O - {st.session_state.score_o} | 🤝 Ties - {st.session_state.ties}")
+
+for i in range(3):
+    cols = st.columns(3)
+    for j in range(3):
+        value = st.session_state.board[i][j] or ""
+        if not st.session_state.game_over and value == "":
+            if cols[j].button(" ", key=f"{i}-{j}"):
+                handle_click(i, j)
+        else:
+            cols[j].markdown(f"<div style='text-align:center;font-size:30px'>{value}</div>", unsafe_allow_html=True)
+
+# Note: Sound/animation in Streamlit is limited. You can use st.audio() or st.balloons() as a simple visual effect.
+if st.session_state.game_over:
+    st.balloons()  # Simple celebratory animation
